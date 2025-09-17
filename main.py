@@ -50,6 +50,13 @@ def save_sheet_id(sheet_id):
     with open(STATE_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
+# 🧾 Commit JSON to Git
+def commit_json_to_git():
+    os.system('git config --global user.name "GitHub Actions"')
+    os.system('git config --global user.email "actions@github.com"')
+    os.system('git add sheet_state.json')
+    os.system('git diff --cached --quiet || (git commit -m "Update sheet ID" && git push)')
+
 # 🔍 Find sheet by name
 def find_sheet_by_name(sheet_name):
     url = "https://www.googleapis.com/drive/v3/files"
@@ -67,20 +74,35 @@ def find_sheet_by_name(sheet_name):
             return files[0]["id"]
     return None
 
+# 🔢 Get row count
+def get_row_count(sheet_id):
+    url = f"https://sheets.googleapis.com/v4/spreadsheets/{sheet_id}/values/Sheet1"
+    headers = {"Authorization": f"Bearer {ACCESS_TOKEN}"}
+    res = requests.get(url, headers=headers)
+    if res.status_code == 200:
+        values = res.json().get("values", [])
+        return len(values)
+    return 0
+
 # ✅ Create or get sheet
 def create_or_get_sheet():
     refresh_access_token()
 
     sheet_id = load_sheet_id()
     if sheet_id:
-        print(f"📄 Using existing sheet: {sheet_id}")
-        return sheet_id
+        row_count = get_row_count(sheet_id)
+        if row_count < 1000:
+            print(f"📄 Reusing sheet: {sheet_id} with {row_count} rows")
+            return sheet_id
+        else:
+            print("📄 Sheet full. Creating new sheet.")
 
     sheet_name = f"{SHEET_PREFIX}{datetime.now().strftime('%Y%m%d_%H%M')}"
     sheet_id = find_sheet_by_name(sheet_name)
     if sheet_id:
         print(f"📄 Found existing sheet: {sheet_id}")
         save_sheet_id(sheet_id)
+        commit_json_to_git()
         return sheet_id
 
     url = "https://sheets.googleapis.com/v4/spreadsheets"
@@ -94,6 +116,7 @@ def create_or_get_sheet():
         sheet_id = res.json()["spreadsheetId"]
         print(f"📄 Sheet created: {sheet_id}")
         save_sheet_id(sheet_id)
+        commit_json_to_git()
         write_headers(sheet_id)
         return sheet_id
     else:
