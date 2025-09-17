@@ -37,7 +37,8 @@ def load_sheet_id():
         with open(STATE_FILE, "r") as f:
             data = json.load(f)
             return data.get("sheet_id")
-    except:
+    except Exception as e:
+        print("⚠️ Failed to read sheet_state.json:", e)
         return None
 
 # 💾 Save sheet ID to Git file
@@ -69,6 +70,7 @@ def find_sheet_by_name(sheet_name):
 # ✅ Create or get sheet
 def create_or_get_sheet():
     refresh_access_token()
+
     sheet_id = load_sheet_id()
     if sheet_id:
         print(f"📄 Using existing sheet: {sheet_id}")
