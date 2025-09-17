@@ -28,10 +28,11 @@ jobs:
       - name: Run scraper
         run: python main.py
 
-      - name: Commit sheet_state.json
+      - name: Commit sheet_state.json if changed
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add sheet_state.json
-          git diff --cached --quiet || git commit -m "Update sheet ID"
-          git push
+          if [ -f sheet_state.json ]; then
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git add sheet_state.json
+            git diff --cached --quiet || (git commit -m "Update sheet ID" && git push)
+          fi
